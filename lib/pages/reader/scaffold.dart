@@ -120,6 +120,18 @@ class _ReaderScaffoldState extends State<_ReaderScaffold> {
 
   bool? rotation;
 
+  Offset annotationToolbarPosition = const Offset(20, 100);
+
+  void updateAnnotationToolbarPosition(Offset newPos) {
+    setState(() {
+      // Ensure the toolbar stays within the screen
+      final size = MediaQuery.of(context).size;
+      double x = newPos.dx.clamp(0, size.width - 50); // 50 is approx width
+      double y = newPos.dy.clamp(0, size.height - 50);
+      annotationToolbarPosition = Offset(x, y);
+    });
+  }
+
   void update() {
     setState(() {});
   }
@@ -132,6 +144,12 @@ class _ReaderScaffoldState extends State<_ReaderScaffold> {
         if (appdata.settings['showPageNumberInReader'] == true)
           buildPageInfoText(),
         buildStatusInfo(),
+        if (context.reader.isAnnotationMode)
+          Positioned(
+            left: annotationToolbarPosition.dx,
+            top: annotationToolbarPosition.dy,
+            child: const AnnotationToolbar(),
+          ),
         AnimatedPositioned(
           duration: const Duration(milliseconds: 180),
           right: 16,
@@ -199,6 +217,19 @@ class _ReaderScaffoldState extends State<_ReaderScaffold> {
                     onPressed: openChapterComments,
                   ),
                 ),
+              Tooltip(
+                message: "Annotation".tl,
+                child: IconButton(
+                  icon: Icon(
+                    Icons.edit,
+                    color: context.reader.isAnnotationMode ? Colors.blue : null,
+                  ),
+                  onPressed: () {
+                    context.reader.toggleAnnotationMode();
+                    openOrClose();
+                  },
+                ),
+              ),
               Tooltip(
                 message: "Settings".tl,
                 child: IconButton(

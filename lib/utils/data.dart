@@ -12,6 +12,7 @@ import 'package:venera/foundation/log.dart';
 import 'package:venera/network/cookie_jar.dart';
 import 'package:venera/utils/ext.dart';
 import 'package:zip_flutter/zip_flutter.dart';
+import 'package:path/path.dart' as p;
 
 import 'io.dart';
 
@@ -37,6 +38,16 @@ Future<File> exportAppData([bool sync = true]) async {
         in Directory(FilePath.join(dataPath, "comic_source")).listSync()) {
       if (file is File) {
         zipFile.addFile("comic_source/${file.name}", file.path);
+      }
+    }
+    var annotationsDir = Directory(FilePath.join(dataPath, "annotations"));
+    if (annotationsDir.existsSync()) {
+      for (var entity in annotationsDir.listSync(recursive: true)) {
+        if (entity is File) {
+          var relativePath = p.relative(entity.path, from: dataPath);
+          relativePath = relativePath.replaceAll(r'\', '/');
+          zipFile.addFile(relativePath, entity.path);
+        }
       }
     }
     zipFile.close();
@@ -106,6 +117,13 @@ Future<void> importAppData(File file, [bool checkVersion = false]) async {
         }
       }
       await ComicSourceManager().reload();
+    }
+    var annotationsDir = FilePath.join(cacheDirPath, "annotations");
+    if (Directory(annotationsDir).existsSync()) {
+      Directory(FilePath.join(App.dataPath, "annotations"))
+          .deleteIfExistsSync(recursive: true);
+      Directory(annotationsDir)
+          .renameSync(FilePath.join(App.dataPath, "annotations"));
     }
   } finally {
     cacheDir.deleteIgnoreError(recursive: true);

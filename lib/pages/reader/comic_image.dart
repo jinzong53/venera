@@ -26,6 +26,7 @@ class ComicImage extends StatefulWidget {
     int? cacheHeight,
     this.onInit,
     this.onDispose,
+    this.overlay,
   })  : image = ResizeImage.resizeIfNeeded(cacheWidth, cacheHeight, image),
         assert(cacheWidth == null || cacheWidth > 0),
         assert(cacheHeight == null || cacheHeight > 0);
@@ -65,6 +66,8 @@ class ComicImage extends StatefulWidget {
   final void Function(State<ComicImage> state)? onInit;
 
   final void Function(State<ComicImage> state)? onDispose;
+
+  final Widget? overlay;
 
   static void clear() => _ComicImageState.clear();
 
@@ -397,6 +400,16 @@ class _ComicImageState extends State<ComicImage> with WidgetsBindingObserver {
             child: result,
           );
         }
+        
+        if (widget.overlay != null) {
+          result = Stack(
+            children: [
+              result,
+              Positioned.fill(child: widget.overlay!),
+            ],
+          );
+        }
+
         result = SizedBox(
           width: width,
           height: height,

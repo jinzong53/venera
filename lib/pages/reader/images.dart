@@ -18,13 +18,19 @@ class _ReaderImagesState extends State<_ReaderImages> {
   void initState() {
     reader = context.reader;
     reader.isLoading = true;
+    reader.annotationNotifier.addListener(_onAnnotationChange);
     super.initState();
   }
 
   @override
   void dispose() {
+    reader.annotationNotifier.removeListener(_onAnnotationChange);
     super.dispose();
     ImageDownloader.cancelAllLoadingImages();
+  }
+
+  void _onAnnotationChange() {
+    if (mounted) setState(() {});
   }
 
   void load() async {
@@ -247,6 +253,7 @@ class _GalleryModeState extends State<_GalleryMode>
         }
       },
       child: PhotoViewGallery.builder(
+        scrollPhysics: reader.isScrollLocked ? const NeverScrollableScrollPhysics() : const BouncingScrollPhysics(),
         backgroundDecoration: BoxDecoration(color: context.colorScheme.surface),
         reverse: reader.mode == ReaderMode.galleryRightToLeft,
         scrollDirection: reader.mode == ReaderMode.galleryTopToBottom
@@ -269,24 +276,38 @@ class _GalleryModeState extends State<_GalleryMode>
 
             photoViewControllers[index] ??= PhotoViewController();
 
+            final viewportSize = MediaQuery.of(context).size;
+
             if (reader.imagesPerPage == 1 ||
                 pageImages.length == 1) {
-              return PhotoViewGalleryPageOptions(
-                filterQuality: FilterQuality.medium,
+              return PhotoViewGalleryPageOptions.customChild(
+                childSize: viewportSize,
                 controller: photoViewControllers[index],
-                imageProvider: _createImageProviderFromKey(
-                  pageImages[0],
-                  context,
-                  startIndex + 1,
+                minScale: PhotoViewComputedScale.contained * 1.0,
+                maxScale: PhotoViewComputedScale.covered * 10.0,
+                child: ComicImage(
+                  image: _createImageProviderFromKey(
+                    pageImages[0],
+                    context,
+                    startIndex + 1,
+                  ),
+                  fit: BoxFit.contain,
+                  onInit: (state) => imageStates.add(state),
+                  onDispose: (state) => imageStates.remove(state),
+                  overlay: AnnotationLayer(
+                    comicId: reader.cid,
+                    chapterId: reader.eid,
+                    pageIndex: startIndex + 1,
+                    isEditing: reader.isAnnotationMode,
+                    selectedTool: reader.annotationTool,
+                    selectedColor: reader.annotationColor,
+                    strokeWidth: reader.annotationStrokeWidth,
+                    fontSizeNotifier: reader.annotationFontSize,
+                  ),
                 ),
-                fit: BoxFit.contain,
-                errorBuilder: (_, error, s, retry) {
-                  return NetworkError(message: error.toString(), retry: retry);
-                },
               );
             }
 
-            final viewportSize = MediaQuery.of(context).size;
             return PhotoViewGalleryPageOptions.customChild(
               childSize: viewportSize,
               controller: photoViewControllers[index],
@@ -363,6 +384,16 @@ class _GalleryModeState extends State<_GalleryMode>
                 : Alignment.centerRight,
             onInit: (state) => imageStates.add(state),
             onDispose: (state) => imageStates.remove(state),
+            overlay: AnnotationLayer(
+              comicId: reader.cid,
+              chapterId: reader.eid,
+              pageIndex: startIndex + 1,
+              isEditing: reader.isAnnotationMode,
+              selectedTool: reader.annotationTool,
+              selectedColor: reader.annotationColor,
+              strokeWidth: reader.annotationStrokeWidth,
+              fontSizeNotifier: reader.annotationFontSize,
+            ),
           ),
         ),
         Expanded(
@@ -380,6 +411,16 @@ class _GalleryModeState extends State<_GalleryMode>
                 : Alignment.centerLeft,
             onInit: (state) => imageStates.add(state),
             onDispose: (state) => imageStates.remove(state),
+            overlay: AnnotationLayer(
+              comicId: reader.cid,
+              chapterId: reader.eid,
+              pageIndex: startIndex + 2,
+              isEditing: reader.isAnnotationMode,
+              selectedTool: reader.annotationTool,
+              selectedColor: reader.annotationColor,
+              strokeWidth: reader.annotationStrokeWidth,
+              fontSizeNotifier: reader.annotationFontSize,
+            ),
           ),
         ),
       ];
@@ -397,6 +438,16 @@ class _GalleryModeState extends State<_GalleryMode>
             fit: BoxFit.contain,
             onInit: (state) => imageStates.add(state),
             onDispose: (state) => imageStates.remove(state),
+            overlay: AnnotationLayer(
+              comicId: reader.cid,
+              selectedTool: reader.annotationTool,
+              selectedColor: reader.annotationColor,
+              strokeWidth: reader.annotationStrokeWidth,
+              fontSizeNotifier: reader.annotationFontSize,
+              chapterId: reader.eid,
+              pageIndex: startIndex,
+              isEditing: reader.isAnnotationMode,
+            ),
           ),
         );
       }).toList();
@@ -780,7 +831,7 @@ class _ContinuousModeState extends State<_ContinuousMode>
           ? Axis.vertical
           : Axis.horizontal,
       reverse: reader.mode == ReaderMode.continuousRightToLeft,
-      physics: isCTRLPressed || _isMouseScrolling || disableScroll
+      physics: isCTRLPressed || _isMouseScrolling || disableScroll || reader.isScrollLocked
           ? const NeverScrollableScrollPhysics()
           : isZoomedIn
           ? const ClampingScrollPhysics()
@@ -809,6 +860,16 @@ class _ContinuousModeState extends State<_ContinuousMode>
             fit: BoxFit.contain,
             onInit: (state) => imageStates.add(state),
             onDispose: (state) => imageStates.remove(state),
+            overlay: AnnotationLayer(
+              selectedTool: reader.annotationTool,
+              selectedColor: reader.annotationColor,
+              strokeWidth: reader.annotationStrokeWidth,
+              fontSizeNotifier: reader.annotationFontSize,
+              comicId: reader.cid,
+              chapterId: reader.eid,
+              pageIndex: index,
+              isEditing: reader.isAnnotationMode,
+            ),
           ),
         );
       },

@@ -16,6 +16,8 @@ import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
 import 'package:venera/components/components.dart';
 import 'package:venera/components/custom_slider.dart';
 import 'package:venera/components/window_frame.dart';
+import 'package:venera/components/annotation_layer.dart';
+import 'package:venera/foundation/annotation.dart';
 import 'package:venera/foundation/app.dart';
 import 'package:venera/foundation/appdata.dart';
 import 'package:venera/foundation/cache_manager.dart';
@@ -42,6 +44,8 @@ import 'package:venera/utils/translations.dart';
 import 'package:venera/utils/volume.dart';
 import 'package:window_manager/window_manager.dart';
 import 'package:battery_plus/battery_plus.dart';
+
+part 'annotation_toolbar.dart';
 
 part 'scaffold.dart';
 
@@ -147,6 +151,24 @@ class _ReaderState extends State<Reader>
   @override
   bool isLoading = false;
 
+  bool isAnnotationMode = false;
+  Color annotationColor = Colors.red;
+  double annotationStrokeWidth = 3.0;
+  ValueNotifier<double> annotationFontSize = ValueNotifier(20.0);
+  String annotationTool = 'pen';
+  
+  final ChangeNotifier annotationNotifier = ChangeNotifier();
+
+  void toggleAnnotationMode() {
+    setState(() {
+      isAnnotationMode = !isAnnotationMode;
+      if (!isAnnotationMode) {
+        isScrollLocked = false;
+      }
+    });
+    annotationNotifier.notifyListeners();
+  }
+
   var focusNode = FocusNode();
 
   @override
@@ -197,6 +219,8 @@ class _ReaderState extends State<Reader>
   }
 
   bool _isInitialized = false;
+
+  bool isScrollLocked = false;
 
   @override
   void didChangeDependencies() {
